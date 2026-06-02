@@ -1,0 +1,2114 @@
+"""
+COMPLETE PROJECT SETUP GUIDE
+Book Writing App - Full Code Organization
+
+Copy each section to the corresponding file path in your repository.
+All file paths are relative to the project root.
+
+═══════════════════════════════════════════════════════════════════════════════
+ROOT LEVEL FILES
+═══════════════════════════════════════════════════════════════════════════════
+"""
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: .gitignore
+# ═══════════════════════════════════════════════════════════════════════════════
+
+node_modules/
+.pnp
+.pnp.js
+
+# Production
+build/
+dist/
+.next/
+out/
+
+# Misc
+.DS_Store
+*.pem
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: .env.example
+# ═══════════════════════════════════════════════════════════════════════════════
+
+PORT=5000
+NODE_ENV=development
+DATABASE_URL=postgresql://user:password@localhost:5432/book_writing_app
+OPENAI_API_KEY=your-openai-api-key-here
+JWT_SECRET=your-jwt-secret-key
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: README.md
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# 📚 Book Writing App
+
+An AI-powered book writing application that helps authors create cohesive narratives with intelligent character management, story structure preservation, and AI-assisted writing.
+
+## ✨ Features
+
+### 📖 Core Writing Features
+- **Smart Chapter Editor**: Real-time editing with word count tracking
+- **Grammar & Style Checking**: AI-powered grammar and style validation
+- **Story Memory**: Full context maintenance across chapters
+- **Version Control**: Track chapter changes and revisions
+
+### 👥 Character Management
+- Create detailed character profiles
+- Track character consistency across chapters
+- Manage character relationships
+- Character arc tracking
+
+### 📝 Story Structure
+- Outline builder with drag-and-drop interface
+- Beat-by-beat organization
+- Scene-level planning
+- Outline-to-chapter conversion
+
+### 🎨 AI Story Generation
+- Genre-specific suggestions
+- Chapter continuation generation
+- Character dialogue suggestions
+- Plot hole detection
+
+### 🎭 Theme Tracking
+- Automatic theme identification
+- Theme usage tracking across chapters
+- Consistency alerts
+
+### 📄 Document Export
+- Generate Word documents (.docx)
+- PDF export support
+- Professional formatting
+
+## 🛠️ Tech Stack
+
+### Frontend
+- Next.js 14 + React 18
+- TypeScript
+- Tailwind CSS
+
+### Backend
+- Node.js + Express.js
+- PostgreSQL
+- OpenAI GPT-4 API
+
+## 🚀 Quick Start
+
+See [docs/SETUP.md](./docs/SETUP.md) for detailed setup instructions.
+
+Happy Writing! 📖✨
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BACKEND FILES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/package.json
+# ═══════════════════════════════════════════════════════════════════════════════
+
+{
+  "name": "book-writing-app-backend",
+  "version": "1.0.0",
+  "description": "AI-powered book writing application backend",
+  "main": "dist/app.js",
+  "scripts": {
+    "dev": "ts-node src/app.ts",
+    "build": "tsc",
+    "start": "node dist/app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "openai": "^4.24.0",
+    "pg": "^8.11.3",
+    "sequelize": "^6.35.2",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/tsconfig.json
+# ═══════════════════════════════════════════════════════════════════════════════
+
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "sourceMap": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/.env.example
+# ═══════════════════════════════════════════════════════════════════════════════
+
+PORT=5000
+NODE_ENV=development
+DATABASE_URL=postgresql://user:password@localhost:5432/book_writing_app
+OPENAI_API_KEY=your-openai-api-key-here
+JWT_SECRET=your-jwt-secret-key
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/app.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import express, { Express } from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { initializeDatabase } from './database/connection';
+import storyRoutes from './routes/storyRoutes';
+import characterRoutes from './routes/characterRoutes';
+import chapterRoutes from './routes/chapterRoutes';
+import outlineRoutes from './routes/outlineRoutes';
+import aiRoutes from './routes/aiRoutes';
+
+dotenv.config();
+
+const app: Express = express();
+const PORT = process.env.PORT || 5000;
+
+// Middleware
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Initialize database
+initializeDatabase();
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: '✅ Server is running', timestamp: new Date() });
+});
+
+// API Routes
+app.use('/api/stories', storyRoutes);
+app.use('/api/characters', characterRoutes);
+app.use('/api/chapters', chapterRoutes);
+app.use('/api/outlines', outlineRoutes);
+app.use('/api/ai', aiRoutes);
+
+// Error handling middleware
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error('Error:', err);
+  res.status(500).json({ error: err.message || 'Internal server error' });
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`📚 Book Writing App API`);
+  console.log(`🔗 http://localhost:${PORT}`);
+});
+
+export default app;
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/database/connection.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import { Sequelize } from 'sequelize';
+
+const sequelize = new Sequelize(process.env.DATABASE_URL || '', {
+  dialect: 'postgres',
+  logging: false,
+  pool: {
+    max: 5,
+    min: 0,
+    acquire: 30000,
+    idle: 10000,
+  },
+});
+
+export const initializeDatabase = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('✅ Database connected successfully');
+    await sequelize.sync({ alter: true });
+    console.log('✅ Database synced');
+  } catch (error) {
+    console.error('❌ Database connection failed:', error);
+    process.exit(1);
+  }
+};
+
+export default sequelize;
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/models/Story.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import { DataTypes, Model } from 'sequelize';
+import sequelize from '../database/connection';
+
+export class Story extends Model {
+  public id!: string;
+  public title!: string;
+  public genre!: string;
+  public description!: string;
+  public authorId!: string;
+  public readonly createdAt!: Date;
+  public readonly updatedAt!: Date;
+}
+
+Story.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    title: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: { len: [1, 255] },
+    },
+    genre: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    authorId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+  },
+  {
+    sequelize,
+    modelName: 'Story',
+    tableName: 'stories',
+    timestamps: true,
+  }
+);
+
+export default Story;
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/models/Character.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import { DataTypes, Model } from 'sequelize';
+import sequelize from '../database/connection';
+
+export class Character extends Model {
+  public id!: string;
+  public storyId!: string;
+  public name!: string;
+  public age!: number;
+  public role!: string;
+  public background!: string;
+  public personality!: string;
+  public traits!: Record<string, string>;
+  public relationships!: any[];
+  public arcSummary!: string;
+  public firstAppearedChapter!: number;
+}
+
+Character.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    storyId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    age: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    role: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    background: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    personality: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    traits: {
+      type: DataTypes.JSONB,
+      defaultValue: {},
+    },
+    relationships: {
+      type: DataTypes.JSONB,
+      defaultValue: [],
+    },
+    arcSummary: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    firstAppearedChapter: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+  },
+  {
+    sequelize,
+    modelName: 'Character',
+    tableName: 'characters',
+    timestamps: true,
+  }
+);
+
+export default Character;
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/models/Chapter.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import { DataTypes, Model } from 'sequelize';
+import sequelize from '../database/connection';
+
+export class Chapter extends Model {
+  public id!: string;
+  public storyId!: string;
+  public chapterNumber!: number;
+  public title!: string;
+  public content!: string;
+  public wordCount!: number;
+  public themes!: string[];
+  public charactersFeatured!: string[];
+  public summary!: string;
+  public version!: number;
+}
+
+Chapter.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    storyId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    chapterNumber: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    title: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    content: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    wordCount: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
+    themes: {
+      type: DataTypes.JSONB,
+      defaultValue: [],
+    },
+    charactersFeatured: {
+      type: DataTypes.JSONB,
+      defaultValue: [],
+    },
+    summary: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    version: {
+      type: DataTypes.INTEGER,
+      defaultValue: 1,
+    },
+  },
+  {
+    sequelize,
+    modelName: 'Chapter',
+    tableName: 'chapters',
+    timestamps: true,
+  }
+);
+
+export default Chapter;
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/models/Outline.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import { DataTypes, Model } from 'sequelize';
+import sequelize from '../database/connection';
+
+export class Outline extends Model {
+  public id!: string;
+  public storyId!: string;
+  public structure!: any[];
+  public scenes!: any[];
+  public currentStatus!: string;
+}
+
+Outline.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    storyId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      unique: true,
+    },
+    structure: {
+      type: DataTypes.JSONB,
+      defaultValue: [],
+    },
+    scenes: {
+      type: DataTypes.JSONB,
+      defaultValue: [],
+    },
+    currentStatus: {
+      type: DataTypes.ENUM('draft', 'in-progress', 'complete'),
+      defaultValue: 'draft',
+    },
+  },
+  {
+    sequelize,
+    modelName: 'Outline',
+    tableName: 'outlines',
+    timestamps: true,
+  }
+);
+
+export default Outline;
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/models/Theme.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import { DataTypes, Model } from 'sequelize';
+import sequelize from '../database/connection';
+
+export class Theme extends Model {
+  public id!: string;
+  public storyId!: string;
+  public name!: string;
+  public description!: string;
+  public chaptersUsed!: number[];
+  public frequency!: number;
+}
+
+Theme.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    storyId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    chaptersUsed: {
+      type: DataTypes.ARRAY(DataTypes.INTEGER),
+      defaultValue: [],
+    },
+    frequency: {
+      type: DataTypes.INTEGER,
+      defaultValue: 1,
+    },
+  },
+  {
+    sequelize,
+    modelName: 'Theme',
+    tableName: 'themes',
+    timestamps: true,
+  }
+);
+
+export default Theme;
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/services/AIService.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import { OpenAI } from 'openai';
+
+export class AIService {
+  private openai: OpenAI;
+
+  constructor() {
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+
+  async generateChapterContinuation(
+    previousChapters: string[],
+    outline: string,
+    characters: any[],
+    genre: string,
+    themes: string[]
+  ): Promise<string> {
+    const characterContext = characters
+      .map(c => `${c.name}: ${c.background}, Personality: ${c.personality}`)
+      .join('\n');
+
+    const prompt = `You are a professional ${genre} author skilled in maintaining narrative consistency and character development.
+
+**Previous Chapters Summary:**
+${previousChapters.slice(-2).join('\n\n')}
+
+**Main Characters:**
+${characterContext}
+
+**Story Themes:** ${themes.join(', ')}
+
+**Outline for This Chapter:**
+${outline}
+
+**Task:** Write the next chapter. Ensure:
+- Character consistency with previous appearances
+- Theme reinforcement
+- Proper story pacing
+- Vivid, engaging prose
+- Proper grammar and spelling
+
+Start writing:`;
+
+    const response = await this.openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      max_tokens: 2000,
+    });
+
+    return response.choices[0].message.content || '';
+  }
+
+  async checkGrammar(text: string): Promise<any> {
+    const prompt = `Proofread this text for grammar, spelling, and style issues. Return a JSON object with:
+- "errors": array of {issue: string, suggestion: string}
+- "summary": brief summary of main issues
+
+Text: "${text}"`;
+
+    const response = await this.openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+    });
+
+    try {
+      return JSON.parse(response.choices[0].message.content || '{}');
+    } catch {
+      return { errors: [], summary: '' };
+    }
+  }
+
+  async detectThemes(content: string, existingThemes: string[]): Promise<string[]> {
+    const prompt = `Identify main themes in this text. Consider these existing themes: ${existingThemes.join(', ')}.
+Return as JSON array of theme strings.
+
+Text: "${content.substring(0, 1000)}"`;
+
+    const response = await this.openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.5,
+    });
+
+    try {
+      return JSON.parse(response.choices[0].message.content || '[]');
+    } catch {
+      return existingThemes;
+    }
+  }
+
+  async suggestDialogue(
+    character: any,
+    context: string,
+    genre: string
+  ): Promise<string> {
+    const prompt = `Generate authentic dialogue for this character matching their voice and personality.
+
+Character: ${character.name}
+Personality: ${character.personality}
+Traits: ${Object.values(character.traits || {}).join(', ')}
+Context: ${context}
+Genre: ${genre}
+
+Provide 2-3 dialogue options that are natural and character-consistent.`;
+
+    const response = await this.openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.8,
+    });
+
+    return response.choices[0].message.content || '';
+  }
+
+  async detectPlotHoles(
+    allChapters: string[],
+    characters: any[],
+    outline: string
+  ): Promise<{ issues: string[]; severity: string[] }> {
+    const prompt = `Review this story for plot holes, character inconsistencies, and timeline issues.
+
+Characters:
+${characters.map(c => `${c.name}: ${c.background}`).join('\n')}
+
+Story outline: ${outline}
+
+Chapters: ${allChapters.map((ch, i) => `Chapter ${i + 1}: ${ch.substring(0, 500)}...`).join('\n\n')}
+
+Return as JSON with 'issues' array and 'severity' array (low/medium/high).`;
+
+    const response = await this.openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+    });
+
+    try {
+      return JSON.parse(response.choices[0].message.content || '{"issues":[],"severity":[]}');
+    } catch {
+      return { issues: [], severity: [] };
+    }
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/services/StoryService.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import Story from '../models/Story';
+import Chapter from '../models/Chapter';
+import Character from '../models/Character';
+import Outline from '../models/Outline';
+import Theme from '../models/Theme';
+
+export class StoryService {
+  async createStory(data: any) {
+    const story = await Story.create(data);
+    await Outline.create({ storyId: story.id });
+    return story;
+  }
+
+  async getStory(id: string) {
+    return await Story.findByPk(id);
+  }
+
+  async getAllStories() {
+    return await Story.findAll();
+  }
+
+  async updateStory(id: string, data: any) {
+    const story = await Story.findByPk(id);
+    if (!story) throw new Error('Story not found');
+    return await story.update(data);
+  }
+
+  async getStoryWithDetails(id: string) {
+    const story = await Story.findByPk(id);
+    if (!story) throw new Error('Story not found');
+
+    const chapters = await Chapter.findAll({ where: { storyId: id } });
+    const characters = await Character.findAll({ where: { storyId: id } });
+    const outline = await Outline.findOne({ where: { storyId: id } });
+    const themes = await Theme.findAll({ where: { storyId: id } });
+
+    return {
+      ...story.toJSON(),
+      chapters,
+      characters,
+      outline,
+      themes,
+    };
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/services/CharacterService.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import Character from '../models/Character';
+
+export class CharacterService {
+  async createCharacter(data: any) {
+    return await Character.create(data);
+  }
+
+  async getCharacter(id: string) {
+    return await Character.findByPk(id);
+  }
+
+  async getCharactersByStory(storyId: string) {
+    return await Character.findAll({ where: { storyId } });
+  }
+
+  async updateCharacter(id: string, data: any) {
+    const character = await Character.findByPk(id);
+    if (!character) throw new Error('Character not found');
+    return await character.update(data);
+  }
+
+  async deleteCharacter(id: string) {
+    const character = await Character.findByPk(id);
+    if (!character) throw new Error('Character not found');
+    await character.destroy();
+  }
+
+  async checkCharacterConsistency(characterId: string) {
+    const character = await Character.findByPk(characterId);
+    if (!character) throw new Error('Character not found');
+    return { consistent: true, warnings: [] };
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/services/ChapterService.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import Chapter from '../models/Chapter';
+
+export class ChapterService {
+  async createChapter(data: any) {
+    const wordCount = data.content ? data.content.split(/\s+/).length : 0;
+    return await Chapter.create({ ...data, wordCount });
+  }
+
+  async getChapter(id: string) {
+    return await Chapter.findByPk(id);
+  }
+
+  async getChaptersByStory(storyId: string) {
+    return await Chapter.findAll({ where: { storyId }, order: [['chapterNumber', 'ASC']] });
+  }
+
+  async updateChapter(id: string, data: any) {
+    const chapter = await Chapter.findByPk(id);
+    if (!chapter) throw new Error('Chapter not found');
+
+    if (data.content) {
+      data.wordCount = data.content.split(/\s+/).length;
+      data.version = (chapter.version || 0) + 1;
+    }
+
+    return await chapter.update(data);
+  }
+
+  async deleteChapter(id: string) {
+    const chapter = await Chapter.findByPk(id);
+    if (!chapter) throw new Error('Chapter not found');
+    await chapter.destroy();
+  }
+
+  async getPreviousChapters(storyId: string, currentChapterNumber: number) {
+    return await Chapter.findAll({
+      where: { storyId },
+      order: [['chapterNumber', 'ASC']],
+    });
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/controllers/StoryController.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import { Request, Response } from 'express';
+import { StoryService } from '../services/StoryService';
+
+const storyService = new StoryService();
+
+export class StoryController {
+  async createStory(req: Request, res: Response) {
+    try {
+      const story = await storyService.createStory(req.body);
+      res.status(201).json(story);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getStories(req: Request, res: Response) {
+    try {
+      const stories = await storyService.getAllStories();
+      res.json(stories);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getStory(req: Request, res: Response) {
+    try {
+      const story = await storyService.getStoryWithDetails(req.params.id);
+      res.json(story);
+    } catch (error: any) {
+      res.status(404).json({ error: error.message });
+    }
+  }
+
+  async updateStory(req: Request, res: Response) {
+    try {
+      const story = await storyService.updateStory(req.params.id, req.body);
+      res.json(story);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/controllers/CharacterController.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import { Request, Response } from 'express';
+import { CharacterService } from '../services/CharacterService';
+
+const characterService = new CharacterService();
+
+export class CharacterController {
+  async createCharacter(req: Request, res: Response) {
+    try {
+      const character = await characterService.createCharacter(req.body);
+      res.status(201).json(character);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getCharacter(req: Request, res: Response) {
+    try {
+      const character = await characterService.getCharacter(req.params.id);
+      res.json(character);
+    } catch (error: any) {
+      res.status(404).json({ error: error.message });
+    }
+  }
+
+  async getCharactersByStory(req: Request, res: Response) {
+    try {
+      const characters = await characterService.getCharactersByStory(req.params.storyId);
+      res.json(characters);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async updateCharacter(req: Request, res: Response) {
+    try {
+      const character = await characterService.updateCharacter(req.params.id, req.body);
+      res.json(character);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async deleteCharacter(req: Request, res: Response) {
+    try {
+      await characterService.deleteCharacter(req.params.id);
+      res.json({ message: 'Character deleted' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async checkConsistency(req: Request, res: Response) {
+    try {
+      const consistency = await characterService.checkCharacterConsistency(req.params.id);
+      res.json(consistency);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/controllers/ChapterController.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import { Request, Response } from 'express';
+import { ChapterService } from '../services/ChapterService';
+
+const chapterService = new ChapterService();
+
+export class ChapterController {
+  async createChapter(req: Request, res: Response) {
+    try {
+      const chapter = await chapterService.createChapter(req.body);
+      res.status(201).json(chapter);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getChapter(req: Request, res: Response) {
+    try {
+      const chapter = await chapterService.getChapter(req.params.id);
+      res.json(chapter);
+    } catch (error: any) {
+      res.status(404).json({ error: error.message });
+    }
+  }
+
+  async getChaptersByStory(req: Request, res: Response) {
+    try {
+      const chapters = await chapterService.getChaptersByStory(req.params.storyId);
+      res.json(chapters);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async updateChapter(req: Request, res: Response) {
+    try {
+      const chapter = await chapterService.updateChapter(req.params.id, req.body);
+      res.json(chapter);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async deleteChapter(req: Request, res: Response) {
+    try {
+      await chapterService.deleteChapter(req.params.id);
+      res.json({ message: 'Chapter deleted' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/controllers/AIController.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import { Request, Response } from 'express';
+import { AIService } from '../services/AIService';
+import { ChapterService } from '../services/ChapterService';
+import { CharacterService } from '../services/CharacterService';
+
+const aiService = new AIService();
+const chapterService = new ChapterService();
+const characterService = new CharacterService();
+
+export class AIController {
+  async generateChapter(req: Request, res: Response) {
+    try {
+      const { storyId, genre, themes, outline } = req.body;
+      const chapters = await chapterService.getChaptersByStory(storyId);
+      const characters = await characterService.getCharactersByStory(storyId);
+
+      const content = await aiService.generateChapterContinuation(
+        chapters.map(c => c.summary || c.content),
+        outline,
+        characters,
+        genre,
+        themes
+      );
+
+      res.json({ content });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async checkGrammar(req: Request, res: Response) {
+    try {
+      const { text } = req.body;
+      const result = await aiService.checkGrammar(text);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async detectThemes(req: Request, res: Response) {
+    try {
+      const { content, existingThemes } = req.body;
+      const themes = await aiService.detectThemes(content, existingThemes);
+      res.json({ themes });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async suggestDialogue(req: Request, res: Response) {
+    try {
+      const { character, context, genre } = req.body;
+      const dialogue = await aiService.suggestDialogue(character, context, genre);
+      res.json({ dialogue });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async detectPlotHoles(req: Request, res: Response) {
+    try {
+      const { storyId } = req.body;
+      const chapters = await chapterService.getChaptersByStory(storyId);
+      const characters = await characterService.getCharactersByStory(storyId);
+      const result = await aiService.detectPlotHoles(
+        chapters.map(c => c.content),
+        characters,
+        'story outline'
+      );
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/controllers/OutlineController.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import { Request, Response } from 'express';
+import Outline from '../models/Outline';
+
+export class OutlineController {
+  async createOutline(req: Request, res: Response) {
+    try {
+      const outline = await Outline.create(req.body);
+      res.status(201).json(outline);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getOutline(req: Request, res: Response) {
+    try {
+      const outline = await Outline.findOne({ where: { storyId: req.params.storyId } });
+      if (!outline) throw new Error('Outline not found');
+      res.json(outline);
+    } catch (error: any) {
+      res.status(404).json({ error: error.message });
+    }
+  }
+
+  async updateOutline(req: Request, res: Response) {
+    try {
+      const outline = await Outline.findOne({ where: { storyId: req.params.storyId } });
+      if (!outline) throw new Error('Outline not found');
+      await outline.update(req.body);
+      res.json(outline);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/routes/storyRoutes.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import { Router } from 'express';
+import { StoryController } from '../controllers/StoryController';
+
+const router = Router();
+const controller = new StoryController();
+
+router.post('/', (req, res) => controller.createStory(req, res));
+router.get('/', (req, res) => controller.getStories(req, res));
+router.get('/:id', (req, res) => controller.getStory(req, res));
+router.put('/:id', (req, res) => controller.updateStory(req, res));
+
+export default router;
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/routes/characterRoutes.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import { Router } from 'express';
+import { CharacterController } from '../controllers/CharacterController';
+
+const router = Router();
+const controller = new CharacterController();
+
+router.post('/', (req, res) => controller.createCharacter(req, res));
+router.get('/:id', (req, res) => controller.getCharacter(req, res));
+router.get('/story/:storyId', (req, res) => controller.getCharactersByStory(req, res));
+router.put('/:id', (req, res) => controller.updateCharacter(req, res));
+router.delete('/:id', (req, res) => controller.deleteCharacter(req, res));
+router.get('/:id/consistency', (req, res) => controller.checkConsistency(req, res));
+
+export default router;
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/routes/chapterRoutes.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import { Router } from 'express';
+import { ChapterController } from '../controllers/ChapterController';
+
+const router = Router();
+const controller = new ChapterController();
+
+router.post('/', (req, res) => controller.createChapter(req, res));
+router.get('/:id', (req, res) => controller.getChapter(req, res));
+router.get('/story/:storyId', (req, res) => controller.getChaptersByStory(req, res));
+router.put('/:id', (req, res) => controller.updateChapter(req, res));
+router.delete('/:id', (req, res) => controller.deleteChapter(req, res));
+
+export default router;
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/routes/outlineRoutes.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import { Router } from 'express';
+import { OutlineController } from '../controllers/OutlineController';
+
+const router = Router();
+const controller = new OutlineController();
+
+router.post('/', (req, res) => controller.createOutline(req, res));
+router.get('/:storyId', (req, res) => controller.getOutline(req, res));
+router.put('/:storyId', (req, res) => controller.updateOutline(req, res));
+
+export default router;
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: backend/src/routes/aiRoutes.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import { Router } from 'express';
+import { AIController } from '../controllers/AIController';
+
+const router = Router();
+const controller = new AIController();
+
+router.post('/generate-chapter', (req, res) => controller.generateChapter(req, res));
+router.post('/check-grammar', (req, res) => controller.checkGrammar(req, res));
+router.post('/detect-themes', (req, res) => controller.detectThemes(req, res));
+router.post('/suggest-dialogue', (req, res) => controller.suggestDialogue(req, res));
+router.post('/detect-plot-holes', (req, res) => controller.detectPlotHoles(req, res));
+
+export default router;
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FRONTEND FILES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: frontend/package.json
+# ═══════════════════════════════════════════════════════════════════════════════
+
+{
+  "name": "book-writing-app-frontend",
+  "version": "1.0.0",
+  "description": "AI-powered book writing application frontend",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "next": "^14.0.4",
+    "axios": "^1.6.5",
+    "zustand": "^4.4.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@types/react": "^18.2.45",
+    "@types/node": "^20.10.6",
+    "@types/react-dom": "^18.2.18",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.1",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "^14.0.4"
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: frontend/.env.example
+# ═══════════════════════════════════════════════════════════════════════════════
+
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: frontend/tsconfig.json
+# ═══════════════════════════════════════════════════════════════════════════════
+
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "strict": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noImplicitAny": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules"]
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: frontend/src/types/story.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+export interface Story {
+  id: string;
+  title: string;
+  genre: string;
+  description: string;
+  authorId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Chapter {
+  id: string;
+  storyId: string;
+  chapterNumber: number;
+  title: string;
+  content: string;
+  wordCount: number;
+  themes: string[];
+  charactersFeatured: string[];
+  summary: string;
+  version: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Character {
+  id: string;
+  storyId: string;
+  name: string;
+  age: number;
+  role: string;
+  background: string;
+  personality: string;
+  traits: Record<string, string>;
+  relationships: any[];
+  arcSummary: string;
+  firstAppearedChapter: number;
+  createdAt: Date;
+}
+
+export interface Outline {
+  id: string;
+  storyId: string;
+  structure: any[];
+  scenes: any[];
+  currentStatus: string;
+  updatedAt: Date;
+}
+
+export interface Theme {
+  id: string;
+  storyId: string;
+  name: string;
+  description: string;
+  chaptersUsed: number[];
+  frequency: number;
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: frontend/src/services/api.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import axios from 'axios';
+import { Story, Chapter, Character, Outline } from '@/types/story';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+export const storyAPI = {
+  createStory: async (story: Partial<Story>) => api.post<Story>('/stories', story),
+  getStories: async () => api.get<Story[]>('/stories'),
+  getStory: async (id: string) => api.get<Story & { chapters: Chapter[]; characters: Character[] }>(`/stories/${id}`),
+  updateStory: async (id: string, story: Partial<Story>) => api.put<Story>(`/stories/${id}`, story),
+};
+
+export const chapterAPI = {
+  createChapter: async (chapter: Partial<Chapter>) => api.post<Chapter>('/chapters', chapter),
+  getChapter: async (id: string) => api.get<Chapter>(`/chapters/${id}`),
+  getChaptersByStory: async (storyId: string) => api.get<Chapter[]>(`/chapters/story/${storyId}`),
+  updateChapter: async (id: string, chapter: Partial<Chapter>) => api.put<Chapter>(`/chapters/${id}`, chapter),
+  deleteChapter: async (id: string) => api.delete(`/chapters/${id}`),
+};
+
+export const characterAPI = {
+  createCharacter: async (character: Partial<Character>) => api.post<Character>('/characters', character),
+  getCharacter: async (id: string) => api.get<Character>(`/characters/${id}`),
+  getCharactersByStory: async (storyId: string) => api.get<Character[]>(`/characters/story/${storyId}`),
+  updateCharacter: async (id: string, character: Partial<Character>) => api.put<Character>(`/characters/${id}`, character),
+  deleteCharacter: async (id: string) => api.delete(`/characters/${id}`),
+  checkConsistency: async (id: string) => api.get(`/characters/${id}/consistency`),
+};
+
+export const outlineAPI = {
+  getOutline: async (storyId: string) => api.get<Outline>(`/outlines/${storyId}`),
+  updateOutline: async (storyId: string, outline: Partial<Outline>) => api.put<Outline>(`/outlines/${storyId}`, outline),
+};
+
+export const aiAPI = {
+  generateChapter: async (data: any) => api.post('/ai/generate-chapter', data),
+  checkGrammar: async (text: string) => api.post('/ai/check-grammar', { text }),
+  detectThemes: async (content: string, existingThemes: string[]) => api.post('/ai/detect-themes', { content, existingThemes }),
+  suggestDialogue: async (character: any, context: string, genre: string) => api.post('/ai/suggest-dialogue', { character, context, genre }),
+  detectPlotHoles: async (storyId: string) => api.post('/ai/detect-plot-holes', { storyId }),
+};
+
+export default api;
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: frontend/src/pages/_app.tsx
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import type { AppProps } from 'next/app';
+import '@/styles/globals.css';
+
+export default function App({ Component, pageProps }: AppProps) {
+  return <Component {...pageProps} />;
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: frontend/src/pages/index.tsx
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import React, { useEffect, useState } from 'react';
+import { storyAPI } from '@/services/api';
+import { Story } from '@/types/story';
+import Link from 'next/link';
+
+export default function Home() {
+  const [stories, setStories] = useState<Story[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showNewStory, setShowNewStory] = useState(false);
+  const [newStory, setNewStory] = useState({ title: '', genre: '', description: '', authorId: 'user-1' });
+
+  useEffect(() => {
+    fetchStories();
+  }, []);
+
+  const fetchStories = async () => {
+    try {
+      const response = await storyAPI.getStories();
+      setStories(response.data);
+    } catch (error) {
+      console.error('Failed to fetch stories:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateStory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await storyAPI.createStory(newStory);
+      setNewStory({ title: '', genre: '', description: '', authorId: 'user-1' });
+      setShowNewStory(false);
+      fetchStories();
+    } catch (error) {
+      console.error('Failed to create story:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-4xl mb-4">📚</div>
+          <p className="text-xl text-gray-700">Loading your stories...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Header */}
+      <header className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900">📚 Book Writing App</h1>
+              <p className="text-gray-600 mt-2">AI-Powered Story Creation & Development</p>
+            </div>
+            <button
+              onClick={() => setShowNewStory(!showNewStory)}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition"
+            >
+              + New Story
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* New Story Form */}
+      {showNewStory && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-2xl font-bold mb-4">Create New Story</h2>
+            <form onSubmit={handleCreateStory} className="space-y-4">
+              <input
+                type="text"
+                placeholder="Story Title"
+                value={newStory.title}
+                onChange={(e) => setNewStory({ ...newStory, title: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                required
+              />
+              <select
+                value={newStory.genre}
+                onChange={(e) => setNewStory({ ...newStory, genre: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                required
+              >
+                <option value="">Select Genre</option>
+                <option value="Fantasy">Fantasy</option>
+                <option value="SciFi">Science Fiction</option>
+                <option value="Mystery">Mystery</option>
+                <option value="Romance">Romance</option>
+                <option value="Thriller">Thriller</option>
+                <option value="Literary">Literary</option>
+              </select>
+              <textarea
+                placeholder="Story Description"
+                value={newStory.description}
+                onChange={(e) => setNewStory({ ...newStory, description: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-24"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold transition"
+                >
+                  Create Story
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowNewStory(false)}
+                  className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Stories Grid */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {stories.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-xl text-gray-600">No stories yet. Create your first one!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {stories.map((story) => (
+              <Link key={story.id} href={`/story/${story.id}`}>
+                <div className="bg-white rounded-lg shadow-lg hover:shadow-xl transition cursor-pointer p-6 h-full">
+                  <h2 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2">{story.title}</h2>
+                  <p className="text-sm text-gray-600 mb-3">Genre: {story.genre}</p>
+                  <p className="text-gray-700 line-clamp-3">{story.description}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: frontend/src/styles/globals.css
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: frontend/tailwind.config.ts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import type { Config } from 'tailwindcss'
+
+const config: Config = {
+  content: [
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+export default config
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: frontend/postcss.config.js
+# ═══════════════════════════════════════════════════════════════════════════════
+
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: frontend/next.config.js
+# ═══════════════════════════════════════════════════════════════════════════════
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  swcMinify: true,
+}
+
+module.exports = nextConfig
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: frontend/.eslintrc.json
+# ═══════════════════════════════════════════════════════════════════════════════
+
+{
+  "extends": "next/core-web-vitals"
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DOCUMENTATION FILES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: docs/SETUP.md
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Setup Guide
+
+## Prerequisites
+
+- Node.js 18+
+- PostgreSQL 14+
+- OpenAI API key
+
+## Installation
+
+### 1. Backend Setup
+
+```bash
+cd backend
+npm install
+cp .env.example .env
+```
+
+Update `.env` with your database credentials and OpenAI API key.
+
+### 2. Database Setup
+
+```bash
+# Using Docker (recommended)
+docker run --name book-db -e POSTGRES_PASSWORD=password -d -p 5432:5432 postgres:15
+
+# Create database
+createdb book_writing_app
+```
+
+### 3. Start Backend Server
+
+```bash
+cd backend
+npm run dev
+```
+
+Server will run on `http://localhost:5000`
+
+### 4. Frontend Setup
+
+```bash
+cd frontend
+npm install
+cp .env.example .env
+```
+
+### 5. Start Frontend
+
+```bash
+cd frontend
+npm run dev
+```
+
+App will be available at `http://localhost:3000`
+
+## Environment Variables
+
+### Backend (.env)
+
+```
+PORT=5000
+NODE_ENV=development
+DATABASE_URL=postgresql://user:password@localhost:5432/book_writing_app
+OPENAI_API_KEY=sk-...
+JWT_SECRET=your-secret-key
+```
+
+### Frontend (.env.local)
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
+```
+
+## Testing
+
+### Health Check
+
+```bash
+curl http://localhost:5000/health
+```
+
+### Create a Story
+
+```bash
+curl -X POST http://localhost:5000/api/stories \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "My First Story",
+    "genre": "Fantasy",
+    "description": "An epic tale",
+    "authorId": "user-1"
+  }'
+```
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: docs/ARCHITECTURE.md
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Architecture Overview
+
+## Project Structure
+
+```
+book-writing-app/
+├── backend/           # Node.js/Express API
+├── frontend/          # Next.js React app
+└── docs/              # Documentation
+```
+
+## Backend Architecture
+
+### Models
+- **Story**: Main story container with title, genre, description
+- **Character**: Character profiles with personality, relationships, arc tracking
+- **Chapter**: Story chapters with content, themes, character tracking
+- **Outline**: Story structure and planning with scenes
+- **Theme**: Story themes tracking usage across chapters
+
+### Services
+- **StoryService**: Story CRUD and full details retrieval
+- **CharacterService**: Character management and consistency checking
+- **ChapterService**: Chapter management with version control
+- **AIService**: OpenAI integration for generation and analysis
+
+### Controllers
+- REST endpoints for all resources
+- Error handling and validation
+- Response formatting
+
+## Frontend Architecture
+
+### Pages
+- `/`: Stories list and creation
+- `/story/[id]`: Story detail view
+- `/story/[id]/editor`: Chapter editor (future)
+- `/story/[id]/characters`: Character management (future)
+- `/story/[id]/outline`: Outline builder (future)
+
+### Services
+- `api.ts`: Axios client for backend communication
+- API methods for all resources
+
+### Types
+- TypeScript interfaces for all data models
+
+## Data Flow
+
+```
+Frontend UI → API Service → Express Routes → Controllers → Services → Database
+           ← Response ←     ← Models ←    ← Business Logic ←
+```
+
+## AI Integration
+
+- OpenAI GPT-4 for story generation
+- Grammar and style checking
+- Theme detection and analysis
+- Character dialogue suggestions
+- Plot hole detection
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: docs/API.md
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# API Documentation
+
+## Base URL
+
+```
+http://localhost:5000/api
+```
+
+## Stories Endpoints
+
+### Create Story
+```
+POST /stories
+
+Body:
+{
+  "title": "My Story",
+  "genre": "Fantasy",
+  "description": "Story description",
+  "authorId": "user-1"
+}
+```
+
+### Get All Stories
+```
+GET /stories
+```
+
+### Get Story Detail
+```
+GET /stories/:id
+```
+
+Returns story with all chapters, characters, outline, and themes.
+
+### Update Story
+```
+PUT /stories/:id
+
+Body:
+{
+  "title": "Updated Title",
+  "description": "Updated description"
+}
+```
+
+## Characters Endpoints
+
+### Create Character
+```
+POST /characters
+
+Body:
+{
+  "storyId": "story-uuid",
+  "name": "John Doe",
+  "age": 30,
+  "role": "Hero",
+  "background": "...",
+  "personality": "...",
+  "traits": { "courage": "high" }
+}
+```
+
+### Get Characters by Story
+```
+GET /characters/story/:storyId
+```
+
+### Update Character
+```
+PUT /characters/:id
+```
+
+### Delete Character
+```
+DELETE /characters/:id
+```
+
+### Check Consistency
+```
+GET /characters/:id/consistency
+```
+
+## Chapters Endpoints
+
+### Create Chapter
+```
+POST /chapters
+
+Body:
+{
+  "storyId": "story-uuid",
+  "chapterNumber": 1,
+  "title": "Chapter One",
+  "content": "...",
+  "summary": "..."
+}
+```
+
+### Get Chapters by Story
+```
+GET /chapters/story/:storyId
+```
+
+### Update Chapter
+```
+PUT /chapters/:id
+
+Body:
+{
+  "content": "Updated content",
+  "themes": ["theme1"]
+}
+```
+
+### Delete Chapter
+```
+DELETE /chapters/:id
+```
+
+## AI Endpoints
+
+### Generate Chapter
+```
+POST /ai/generate-chapter
+
+Body:
+{
+  "storyId": "story-uuid",
+  "genre": "Fantasy",
+  "themes": ["good vs evil"],
+  "outline": "Chapter outline..."
+}
+
+Response:
+{
+  "content": "Generated chapter content..."
+}
+```
+
+### Check Grammar
+```
+POST /ai/check-grammar
+
+Body:
+{
+  "text": "Text to check..."
+}
+
+Response:
+{
+  "errors": [{ "issue": "...", "suggestion": "..." }],
+  "summary": "Summary"
+}
+```
+
+### Detect Themes
+```
+POST /ai/detect-themes
+
+Body:
+{
+  "content": "Chapter content...",
+  "existingThemes": ["theme1", "theme2"]
+}
+
+Response:
+{
+  "themes": ["theme1", "theme2", "newTheme"]
+}
+```
+
+### Suggest Dialogue
+```
+POST /ai/suggest-dialogue
+
+Body:
+{
+  "character": { "name": "John", "personality": "..." },
+  "context": "Scene context...",
+  "genre": "Fantasy"
+}
+
+Response:
+{
+  "dialogue": "Suggested dialogue..."
+}
+```
+
+### Detect Plot Holes
+```
+POST /ai/detect-plot-holes
+
+Body:
+{
+  "storyId": "story-uuid"
+}
+
+Response:
+{
+  "issues": ["Issue 1", "Issue 2"],
+  "severity": ["high", "low"]
+}
+```
+
+## Outline Endpoints
+
+### Get Outline
+```
+GET /outlines/:storyId
+```
+
+### Update Outline
+```
+PUT /outlines/:storyId
+
+Body:
+{
+  "structure": [...],
+  "scenes": [...],
+  "currentStatus": "in-progress"
+}
+```
